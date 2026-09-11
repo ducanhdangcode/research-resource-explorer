@@ -74,12 +74,12 @@ function App() {
   return (
     <main>
       <header>
-        <div className="brand-icon">↗</div>
+        <div className="brand-icon">⌕</div>
         <div>
           <h1>Resource Explorer</h1>
           <p>FOLLOW THE SOURCE</p>
         </div>
-        <span className="local">● Local</span>
+        <span className="local">Local</span>
       </header>
       <nav aria-label="Chế độ">
         <button
