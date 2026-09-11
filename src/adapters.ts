@@ -1,5 +1,29 @@
 import type { Citation } from "./types";
 import { webUrl } from "./types";
+
+function extractClaim(link: HTMLAnchorElement, answer: Element): string {
+  // Tier 1: immediate paragraph context, skip if it's just a citation marker
+  const ctx = link.closest("p,li,blockquote");
+  if (ctx) {
+    const text = ctx.textContent?.trim() ?? "";
+    if (text.length > 30 && !/^[\s\d\[\]().,↩↑•\-]+$/.test(text))
+      return text.slice(0, 4000);
+  }
+
+  // Tier 2: scan preceding paragraphs in the answer for the nearest substantive text
+  const paragraphs = [...answer.querySelectorAll("p,li,blockquote")];
+  const linkPara = link.closest("p,li,blockquote,div");
+  const idx = linkPara ? paragraphs.indexOf(linkPara) : -1;
+  const from = idx === -1 ? paragraphs.length : idx;
+  for (let i = from - 1; i >= 0; i--) {
+    const text = paragraphs[i]?.textContent?.trim() ?? "";
+    if (text.length > 30) return text.slice(0, 4000);
+  }
+
+  // Tier 3: full answer text
+  return (answer.textContent ?? "").trim().slice(0, 4000);
+}
+
 export function extractCitations(doc: Document, hostname: string): Citation[] {
   const config = [
     {
@@ -33,9 +57,7 @@ export function extractCitations(doc: Document, hostname: string): Citation[] {
         continue;
       }
       if (url.hostname === hostname) continue;
-      const context =
-        link.closest("p,li,blockquote") || link.parentElement || answer;
-      const claim = (context.textContent || "").trim().slice(0, 4000);
+      const claim = extractClaim(link, answer);
       if (result.some((c) => c.url === url.href && c.claim === claim)) continue;
       result.push({
         id: `${answerIndex}:${result.length}`,
