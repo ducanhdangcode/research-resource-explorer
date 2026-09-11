@@ -32,6 +32,20 @@ const tokens = (s: string) =>
       .value.match(/[\p{L}\p{N}]+/gu)
       ?.filter((t) => t.length > 2 || /\d/.test(t)) ?? [],
   );
+// Break a long claim into sentence-sized probes. Matching the whole paragraph
+// at once dilutes the score: the supporting passage in the source usually
+// covers only one sentence, so requiring most of the paragraph's vocabulary in
+// a single window almost never succeeds. Per-sentence probes keep the
+// denominator small enough for a real match to clear the threshold.
+function probes(query: string): Set<string>[] {
+  const sentences = query
+    .split(/(?<=[.!?。！？])\s+|[\n;]+/)
+    .map(tokens)
+    .filter((s) => s.size >= 3);
+  if (sentences.length) return sentences;
+  const whole = tokens(query);
+  return whole.size >= 3 ? [whole] : [];
+}
 export function match(text: string, claim: string, quote = ""): Candidate[] {
   const query = (quote || claim).trim();
   if (query.length < 12) return [];
@@ -54,8 +68,8 @@ export function match(text: string, claim: string, quote = ""): Candidate[] {
     from = at + needle.length;
   }
   if (exact.length) return exact;
-  const wanted = tokens(query);
-  if (wanted.size < 3) return [];
+  const units = probes(query);
+  if (!units.length) return [];
   const candidates: Candidate[] = [];
   for (const block of text.matchAll(/[^\n]+/g)) {
     const raw = block[0];
@@ -63,8 +77,19 @@ export function match(text: string, claim: string, quote = ""): Candidate[] {
     for (let offset = 0; offset < raw.length; offset += 700) {
       const chunk = raw.slice(offset, offset + 1100);
       const available = tokens(chunk);
-      const overlap = [...wanted].filter((t) => available.has(t)).length;
-      const score = overlap / wanted.size;
+      // Score the window by its best-matching claim sentence, not the whole
+      // paragraph, so a short supporting passage isn't penalised for the rest.
+      let score = 0;
+      let overlap = 0;
+      for (const unit of units) {
+        let hits = 0;
+        for (const t of unit) if (available.has(t)) hits++;
+        const unitScore = hits / unit.size;
+        if (unitScore > score || (unitScore === score && hits > overlap)) {
+          score = unitScore;
+          overlap = hits;
+        }
+      }
       if (score >= 0.55 && overlap >= 3)
         candidates.push({
           text: chunk,

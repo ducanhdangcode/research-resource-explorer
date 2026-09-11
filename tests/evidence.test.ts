@@ -71,6 +71,14 @@ describe("matching safety", () => {
     );
     expect(candidates[0]?.method).toBe("lexical");
   });
+  it("matches a short source passage against a long multi-sentence claim", () => {
+    const claim =
+      "The report covers many unrelated topics at length. Global coffee prices rose sharply in 2024 because of drought in Brazil. It also discusses shipping, tariffs, labour markets and a dozen other things in great detail.";
+    const source =
+      "Adverse weather drove the rally: coffee prices rose sharply in 2024 because of drought in Brazil, traders said.";
+    const candidates = match(source, claim);
+    expect(candidates[0]?.method).toBe("lexical");
+  });
   it("rejects very short queries", () => {
     expect(match("research research research", "research")).toEqual([]);
   });
