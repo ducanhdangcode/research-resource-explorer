@@ -288,6 +288,7 @@ function App() {
                     {c.method === "lexical"
                       ? "ĐOẠN CÓ THỂ LIÊN QUAN"
                       : "KHỚP VĂN BẢN"}
+                    {c.page ? ` · TRANG ${c.page}` : ""}
                   </span>
                   <p>{c.text}</p>
                   <button
@@ -302,7 +303,7 @@ function App() {
                       })
                     }
                   >
-                    Đến đoạn này ↗
+                    {c.page ? `Đến trang ${c.page} ↗` : "Đến đoạn này ↗"}
                   </button>
                 </div>
               ))}
@@ -326,8 +327,8 @@ function App() {
       <footer>
         <span>◈ Xử lý trên trình duyệt của bạn</span>
         <p>
-          Khớp văn bản không đồng nghĩa với xác minh nhận định. MVP hỗ trợ HTML;
-          chưa hỗ trợ PDF.
+          Khớp văn bản không đồng nghĩa với xác minh nhận định. Hỗ trợ trang
+          HTML và PDF (PDF nhảy tới đúng trang thay vì tô sáng).
         </p>
       </footer>
     </main>

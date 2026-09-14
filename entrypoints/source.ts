@@ -14,8 +14,13 @@ export default defineUnlistedScript(() => {
     )
       return;
     void (async () => {
-      if (document.contentType !== "text/html")
-        throw new Error("MVP chỉ hỗ trợ HTML. PDF chưa được hỗ trợ.");
+      if (document.contentType !== "text/html") {
+        // PDFs render in Chrome's viewer with no readable DOM; hand them back
+        // to the background so it can extract the text with pdf.js instead.
+        if (message.type === "MATCH" && document.contentType === "application/pdf")
+          return { pdf: true };
+        throw new Error("Chỉ hỗ trợ HTML và PDF. Định dạng này chưa được hỗ trợ.");
+      }
       const read = () =>
         indexDocument(
           document.querySelector('article,main,[role="main"]') || document.body,

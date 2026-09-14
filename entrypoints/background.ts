@@ -1,6 +1,71 @@
 import { browser } from "wxt/browser";
-import { taskKey, webUrl, type Task } from "../src/types";
+import { taskKey, webUrl, type Candidate, type Task } from "../src/types";
+import { match } from "../src/matcher";
+import { pageAt } from "../src/pdf";
 export default defineBackground(() => {
+  const looksLikePdf = (url: string) =>
+    new URL(url).pathname.toLowerCase().endsWith(".pdf");
+  // Reuse one offscreen document across tasks; the module flag resets whenever
+  // the service worker restarts, and hasDocument() covers the survivor case.
+  let offscreen: Promise<void> | undefined;
+  function ensureOffscreen() {
+    if (!offscreen)
+      offscreen = (async () => {
+        try {
+          const api = browser.offscreen as typeof browser.offscreen & {
+            hasDocument?: () => Promise<boolean>;
+          };
+          if (await api.hasDocument?.()) return;
+          await browser.offscreen.createDocument({
+            url: "offscreen.html",
+            reasons: ["WORKERS"],
+            justification: "Trích xuất văn bản từ tệp PDF để đối chiếu.",
+          });
+        } catch (error) {
+          offscreen = undefined; // let the next task retry a fresh creation
+          throw error;
+        }
+      })();
+    return offscreen;
+  }
+  async function matchPdf(task: Task) {
+    await ensureOffscreen();
+    const result = (await browser.runtime.sendMessage({
+      type: "PDF_EXTRACT",
+      url: task.url,
+    })) as { text: string; starts: number[] } | { error: string };
+    if ("error" in result) throw new Error(result.error);
+    const candidates = match(result.text, task.claim, task.quote).map(
+      (c): Candidate => ({ ...c, page: pageAt(result.starts, c.start) }),
+    );
+    return { candidates, actualUrl: task.url };
+  }
+  async function locate(task: Task) {
+    let injected = false;
+    try {
+      await browser.scripting.executeScript({
+        target: { tabId: task.tabId! },
+        files: ["/source.js"],
+      });
+      injected = true;
+      const result = await browser.tabs.sendMessage(task.tabId!, {
+        type: "MATCH",
+        claim: task.claim,
+        quote: task.quote,
+      });
+      if (result?.error) throw new Error(result.error);
+      if (result?.pdf) return await matchPdf(task);
+      return {
+        candidates: result.candidates as Candidate[],
+        actualUrl: result.actualUrl as string,
+      };
+    } catch (error) {
+      // Chrome may refuse to inject into its PDF viewer at all; if the URL
+      // looks like a PDF, extract it directly rather than surfacing the error.
+      if (!injected && looksLikePdf(task.url)) return await matchPdf(task);
+      throw error;
+    }
+  }
   const save = (task: Task) =>
     browser.storage.session.set({ [taskKey(task.id)]: task });
   const tasks = async () =>
@@ -16,16 +81,7 @@ export default defineBackground(() => {
       if (tab.status !== "complete") return;
       task.status = "matching";
       await save(task);
-      await browser.scripting.executeScript({
-        target: { tabId: task.tabId },
-        files: ["/source.js"],
-      });
-      const result = await browser.tabs.sendMessage(task.tabId, {
-        type: "MATCH",
-        claim: task.claim,
-        quote: task.quote,
-      });
-      if (result.error) throw new Error(result.error);
+      const result = await locate(task);
       task.candidates = result.candidates;
       task.actualUrl = result.actualUrl;
       task.status = "completed";
@@ -165,6 +221,13 @@ export default defineBackground(() => {
         const candidate = task.candidates?.[message.index];
         if (!candidate) throw new Error("Đoạn không tồn tại.");
         await browser.tabs.update(task.tabId, { active: true });
+        // PDFs have no highlightable DOM; jump the viewer to the page instead.
+        if (candidate.page) {
+          const url = new URL(task.url);
+          url.hash = `page=${candidate.page}`;
+          await browser.tabs.update(task.tabId, { url: url.href });
+          return { ok: true };
+        }
         return await browser.tabs.sendMessage(task.tabId, {
           type: "HIGHLIGHT",
           candidate,

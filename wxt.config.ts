@@ -7,7 +7,14 @@ export default defineConfig({
     minimum_chrome_version: "120",
     description:
       "Open citations and locate matching passages. Local research tools.",
-    permissions: ["activeTab", "scripting", "storage", "sidePanel", "alarms"],
+    permissions: [
+      "activeTab",
+      "scripting",
+      "storage",
+      "sidePanel",
+      "alarms",
+      "offscreen",
+    ],
     optional_host_permissions: ["https://*/*", "http://*/*"],
     action: { default_title: "Explore citations" },
     icons: {

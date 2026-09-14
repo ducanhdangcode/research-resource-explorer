@@ -11,6 +11,8 @@ export interface Candidate {
   end: number;
   method: "exact" | "normalized" | "lexical";
   score: number;
+  // 1-based page number when the source is a PDF; used to jump via #page=N.
+  page?: number;
 }
 export interface Task {
   id: string;
