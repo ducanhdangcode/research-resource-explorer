@@ -45,7 +45,7 @@ export default defineUnlistedScript(() => {
           candidates[0]!.method !== "lexical"
         )
           highlight(locate(index, candidates[0]!.start, candidates[0]!.end));
-        return { candidates, actualUrl: location.href };
+        return { candidates, actualUrl: location.href, text: index.text };
       }
       const index = read();
       const c = message.candidate;

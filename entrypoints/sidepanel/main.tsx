@@ -18,6 +18,9 @@ function App() {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<"explore" | "history">("explore");
+  // Conversation context attached to the selected citation; passed to the AI
+  // passage search. Cleared for manual entries.
+  const [context, setContext] = useState("");
   useEffect(() => {
     const refresh = () => {
       void browser.storage.session.get(null).then((data) =>
@@ -66,7 +69,7 @@ function App() {
         throw new Error(
           "Chưa được cấp quyền đọc nguồn. Bạn có thể thử lại khi sẵn sàng.",
         );
-      await send({ type: "START", url: parsed.href, claim, quote });
+      await send({ type: "START", url: parsed.href, claim, quote, context });
       setView("history");
     });
   }
@@ -151,6 +154,7 @@ function App() {
                       setUrl(c.url);
                       setClaim(c.claim);
                       setQuote("");
+                      setContext(c.context ?? "");
                     }}
                   >
                     <span>
@@ -173,7 +177,10 @@ function App() {
               type="url"
               placeholder="https://example.org/research"
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                setContext("");
+              }}
               maxLength={5000}
             />
             <label htmlFor="claim">Nhận định cần đối chiếu</label>
@@ -285,9 +292,11 @@ function App() {
               {task.candidates?.map((c, i) => (
                 <div className="evidence" key={i}>
                   <span className="eyebrow">
-                    {c.method === "lexical"
-                      ? "ĐOẠN CÓ THỂ LIÊN QUAN"
-                      : "KHỚP VĂN BẢN"}
+                    {c.method === "semantic"
+                      ? "ĐOẠN AI GỢI Ý"
+                      : c.method === "lexical"
+                        ? "ĐOẠN CÓ THỂ LIÊN QUAN"
+                        : "KHỚP VĂN BẢN"}
                     {c.page ? ` · TRANG ${c.page}` : ""}
                   </span>
                   <p>{c.text}</p>

@@ -15,6 +15,7 @@ export default defineConfig({
       "alarms",
       "offscreen",
     ],
+    host_permissions: ["https://generativelanguage.googleapis.com/*"],
     optional_host_permissions: ["https://*/*", "http://*/*"],
     action: { default_title: "Explore citations" },
     icons: {

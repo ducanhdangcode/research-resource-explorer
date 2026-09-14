@@ -20,6 +20,15 @@ bun run build
 
 Có thể nhập URL và nhận định thủ công. Nếu có **trích dẫn nguyên văn**, nhập vào ô tương ứng: một kết quả exact/normalized duy nhất sẽ tự scroll và highlight. Ứng viên lexical hoặc nhiều đoạn trùng nhau cần chọn **Đến đoạn này**.
 
+### Tùy chọn: tìm đoạn bằng AI (Gemini)
+
+Match cục bộ dựa trên trùng từ vựng nên hay trượt khi nguồn được **diễn giải lại**. Nếu cấu hình API key Gemini, extension sẽ **tự động** gọi Gemini trên mỗi lần tìm: gửi văn bản trang nguồn (kèm ngữ cảnh hội thoại nếu quét từ trang chat) để lấy các đoạn liên quan chép nguyên văn, rồi định vị lại và highlight như bình thường. Kết quả AI được gộp cùng match cục bộ nhằm tìm được nhiều đoạn liên quan nhất có thể.
+
+1. Sao chép `.env.example` thành `.env`, điền `WXT_GEMINI_API_KEY` (lấy tại <https://aistudio.google.com/apikey>). Key được nhúng lúc build — chỉ dùng cho bản cá nhân.
+2. Chạy lại `bun run build` (hoặc `bun run dev`). Không còn key thì extension chỉ chạy match cục bộ như trước.
+
+> ⚠️ Khi có key, nội dung trang nguồn và ngữ cảnh hội thoại được gửi tới Google — phá vỡ mặc định "chỉ xử lý cục bộ". Bỏ key khỏi `.env` và build lại để tắt hoàn toàn.
+
 ```sh
 bun run dev       # WXT development
 bun run check     # TypeScript

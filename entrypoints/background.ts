@@ -2,7 +2,57 @@ import { browser } from "wxt/browser";
 import { taskKey, webUrl, type Candidate, type Task } from "../src/types";
 import { match } from "../src/matcher";
 import { pageAt } from "../src/pdf";
+import { geminiFindPassages } from "../src/gemini";
 export default defineBackground(() => {
+  const geminiKey = import.meta.env.WXT_GEMINI_API_KEY as string | undefined;
+  // Max candidates surfaced per task once local + AI results are merged.
+  const MERGED_CAP = 8;
+  // Whenever a key is configured, run the AI pass on every task and merge its
+  // verbatim passages with the local ones, aiming for the widest useful set.
+  // Each snippet is re-anchored via match() against the same text the offsets
+  // were computed from; snippets Gemini altered (so they aren't verbatim) are
+  // dropped to keep highlighting reliable. Best-effort: any failure leaves the
+  // local candidates untouched — AI never fails the task.
+  async function aiAugment(
+    text: string,
+    task: Task,
+    local: Candidate[],
+    starts?: number[],
+  ): Promise<Candidate[]> {
+    if (!geminiKey || !text.trim()) return local;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30_000);
+    try {
+      const snippets = await geminiFindPassages(
+        text,
+        task.claim,
+        task.quote,
+        geminiKey,
+        task.context ?? "",
+        controller.signal,
+      );
+      const semantic: Candidate[] = [];
+      for (const snippet of snippets) {
+        const hit = match(text, "", snippet)[0];
+        if (!hit) continue;
+        semantic.push({
+          ...hit,
+          method: "semantic",
+          ...(starts ? { page: pageAt(starts, hit.start) } : {}),
+        });
+      }
+      return [...semantic, ...local]
+        .filter(
+          (c, i, all) =>
+            !all.slice(0, i).some((p) => c.start < p.end && c.end > p.start),
+        )
+        .slice(0, MERGED_CAP);
+    } catch {
+      return local; // network/quota/timeout — never fail the task over AI
+    } finally {
+      clearTimeout(timer);
+    }
+  }
   const looksLikePdf = (url: string) =>
     new URL(url).pathname.toLowerCase().endsWith(".pdf");
   // Reuse one offscreen document across tasks; the module flag resets whenever
@@ -38,7 +88,10 @@ export default defineBackground(() => {
     const candidates = match(result.text, task.claim, task.quote).map(
       (c): Candidate => ({ ...c, page: pageAt(result.starts, c.start) }),
     );
-    return { candidates, actualUrl: task.url };
+    return {
+      candidates: await aiAugment(result.text, task, candidates, result.starts),
+      actualUrl: task.url,
+    };
   }
   async function locate(task: Task) {
     let injected = false;
@@ -56,7 +109,11 @@ export default defineBackground(() => {
       if (result?.error) throw new Error(result.error);
       if (result?.pdf) return await matchPdf(task);
       return {
-        candidates: result.candidates as Candidate[],
+        candidates: await aiAugment(
+          (result.text as string) ?? "",
+          task,
+          result.candidates as Candidate[],
+        ),
         actualUrl: result.actualUrl as string,
       };
     } catch (error) {
@@ -184,6 +241,10 @@ export default defineBackground(() => {
           url: url.href,
           claim: message.claim,
           quote: message.quote,
+          context:
+            typeof message.context === "string"
+              ? message.context.slice(0, 20_000)
+              : undefined,
           createdAt: Date.now(),
           status: "opening",
         };

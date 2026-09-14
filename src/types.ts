@@ -4,12 +4,15 @@ export interface Citation {
   url: string;
   title: string;
   claim: string;
+  // Surrounding conversation (user turn + assistant answer) used as extra
+  // context for the AI passage search. Absent for manual entries.
+  context?: string;
 }
 export interface Candidate {
   text: string;
   start: number;
   end: number;
-  method: "exact" | "normalized" | "lexical";
+  method: "exact" | "normalized" | "lexical" | "semantic";
   score: number;
   // 1-based page number when the source is a PDF; used to jump via #page=N.
   page?: number;
@@ -19,6 +22,7 @@ export interface Task {
   url: string;
   claim: string;
   quote: string;
+  context?: string;
   tabId?: number;
   createdAt: number;
   status: "opening" | "matching" | "completed" | "failed";
