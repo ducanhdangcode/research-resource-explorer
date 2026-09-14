@@ -124,10 +124,20 @@ function App() {
               onClick={() =>
                 act(async () => {
                   const res = await send({ type: "SCAN" });
-                  setCitations(res?.citations || []);
-                  if (!res?.citations?.length)
+                  const found: Citation[] = res?.citations || [];
+                  // Merge, not replace: Gemini only exposes a source URL while
+                  // its card is open, so users open a card, scan, open the next
+                  // and scan again — each pass adds to the list.
+                  setCitations((prev) => {
+                    const byKey = new Map(
+                      prev.map((c) => [`${c.url}\n${c.claim}`, c]),
+                    );
+                    for (const c of found) byKey.set(`${c.url}\n${c.claim}`, c);
+                    return [...byKey.values()];
+                  });
+                  if (!found.length)
                     setNote(
-                      "Chưa thấy link nguồn. Mở danh sách citation trên trang AI rồi quét lại, hoặc nhập thủ công bên dưới.",
+                      "Chưa thấy link nguồn. Trên Gemini, mở (bấm) thẻ nguồn để hiện link rồi quét lại — mỗi lần quét sẽ thêm vào danh sách. Hoặc nhập thủ công bên dưới.",
                     );
                 })
               }
@@ -140,20 +150,27 @@ function App() {
             <section>
               <div className="section-label">
                 NGUỒN TÌM THẤY <span>{citations.length}</span>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={() => setCitations([])}
+                >
+                  Xóa danh sách
+                </button>
               </div>
               <p className="hint">
                 Liên kết được đọc từ câu trả lời; hãy kiểm tra và sửa nhận định
                 trước khi tìm.
               </p>
               <div className="citations">
-                {citations.map((c) => (
+                {citations.map((c, i) => (
                   <button
                     className="citation"
-                    key={c.id}
+                    key={`${c.url}\n${c.claim}\n${i}`}
                     onClick={() => {
                       setUrl(c.url);
                       setClaim(c.claim);
-                      setQuote("");
+                      setQuote(c.quote ?? "");
                       setContext(c.context ?? "");
                     }}
                   >

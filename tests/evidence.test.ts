@@ -94,12 +94,60 @@ describe("citation extraction", () => {
     expect(citations).toHaveLength(1);
     expect(citations[0]?.claim).toContain("A research claim");
   });
-  it("has adapters for Gemini and Claude", () => {
+  it("falls back to hostname-named Gemini chips when no card is open", () => {
+    document.body.innerHTML = `
+      <model-response>
+        <p>Theo nghiên cứu này, tỷ lệ tăng trưởng đạt 30%.<div class="source-inline-chip-container"><button aria-label="Xem thông tin chi tiết từ nguồn trích dẫn: www.studocu.vn. Nhấn phím Enter để mở hộp thoại nguồn."></button></div></p>
+      </model-response>
+      <user-query>câu hỏi của người dùng</user-query>
+    `;
+    const citations = extractCitations(document, "gemini.google.com");
+    expect(citations[0]?.provider).toBe("Gemini");
+    expect(citations[0]?.url).toBe("https://www.studocu.vn/");
+    expect(citations[0]?.title).toBe("www.studocu.vn");
+    expect(citations[0]?.claim).toContain("30%");
+  });
+  it("splits multiple hostname chips joined by 'và'", () => {
+    document.body.innerHTML = `
+      <model-response>
+        <p>Dữ liệu cho thấy nhiều kết quả.<div class="source-inline-chip-container"><button aria-label="Xem thông tin chi tiết từ nguồn trích dẫn: www.example.com và www.another.org. Nhấn phím Enter."></button></div></p>
+      </model-response>
+    `;
+    const citations = extractCitations(document, "gemini.google.com");
+    expect(citations.map((c) => c.url)).toContain("https://www.example.com/");
+    expect(citations.map((c) => c.url)).toContain("https://www.another.org/");
+  });
+  it("reads real Gemini source links from an opened card, with quote and claim", () => {
+    document.body.innerHTML = `
+      <model-response>
+        <p>Vạn Lý Trường Thành có tuổi đời hơn 2300 năm.<div class="source-inline-chip-container"><button aria-label="Xem thông tin chi tiết từ nguồn trích dẫn: Du lịch Phượng Hoàng. Nhấn phím Enter."></button></div></p>
+      </model-response>
+      <div class="cdk-overlay-container">
+        <a href="https://dulichphuonghoang.vn/van-ly-truong-thanh#:~:text=B%E1%BB%A9c%20t%C6%B0%E1%BB%9Dng%20th%C3%A0nh%20ki%C3%AAn%20c%E1%BB%91">Du lịch Phượng Hoàng Vạn Lý Trường Thành</a>
+      </div>
+    `;
+    const [c] = extractCitations(document, "gemini.google.com");
+    expect(c?.url).toContain("dulichphuonghoang.vn");
+    expect(c?.title).toBe("Du lịch Phượng Hoàng");
+    expect(c?.claim).toContain("2300 năm");
+    expect(c?.quote).toBe("Bức tường thành kiên cố");
+  });
+  it("ignores Google-owned nav links on Gemini", () => {
+    document.body.innerHTML = `
+      <model-response>
+        <p>Một nhận định đủ dài để trở thành claim hợp lệ ở đây.<div class="source-inline-chip-container"><button aria-label="Xem thông tin chi tiết từ nguồn trích dẫn: PYS Travel. Nhấn phím Enter."></button></div></p>
+      </model-response>
+      <a href="https://www.google.com.vn/intl/vi/about/products">Google apps</a>
+      <a href="https://accounts.google.com/SignOutOptions">account</a>
+    `;
+    const citations = extractCitations(document, "gemini.google.com");
+    // The name-only chip ("PYS Travel") isn't a hostname and no real card link
+    // exists, so nothing resolvable — and Google chrome links are excluded.
+    expect(citations).toHaveLength(0);
+  });
+  it("has adapter for Claude", () => {
     document.body.innerHTML =
-      '<model-response><p>Gemini claim <a href="https://example.org">source</a></p></model-response><div class="font-claude-response"><p>Claude claim <a href="https://example.org">source</a></p></div>';
-    expect(extractCitations(document, "gemini.google.com")[0]?.provider).toBe(
-      "Gemini",
-    );
+      '<div class="font-claude-response"><p>Claude claim <a href="https://example.org">source</a></p></div>';
     expect(extractCitations(document, "claude.ai")[0]?.provider).toBe("Claude");
   });
   it("fails explicitly on unsupported providers", () => {

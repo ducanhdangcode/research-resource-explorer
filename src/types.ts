@@ -4,6 +4,9 @@ export interface Citation {
   url: string;
   title: string;
   claim: string;
+  // Verbatim passage to locate, when the source exposes one (e.g. a Gemini
+  // source link carries a #:~:text= fragment). Pre-fills the quote field.
+  quote?: string;
   // Surrounding conversation (user turn + assistant answer) used as extra
   // context for the AI passage search. Absent for manual entries.
   context?: string;

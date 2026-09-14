@@ -15,7 +15,7 @@ bun run build
 2. Chọn **Load unpacked**, chọn `.output/chrome-mv3` trong dự án.
 3. Pin Resource Explorer trên toolbar.
 4. Mở ChatGPT, Gemini hoặc Claude; bấm icon extension để mở side panel và cấp `activeTab` cho tab đó.
-5. Bấm **Quét citation từ tab hiện tại**. Chọn nguồn, kiểm tra/sửa nhận định, sau đó **Mở nguồn & tìm đoạn**.
+5. Bấm **Quét citation từ tab hiện tại**. Chọn nguồn, kiểm tra/sửa nhận định, sau đó **Mở nguồn & tìm đoạn**. Với **Gemini**, bấm mở thẻ nguồn trên trang trước khi quét (xem [Giới hạn](#giới-hạn)); có thể quét nhiều lần để cộng dồn.
 6. Chấp nhận quyền domain nguồn. Extension mở tab, tìm và hiển thị kết quả trong panel.
 
 Có thể nhập URL và nhận định thủ công. Nếu có **trích dẫn nguyên văn**, nhập vào ô tương ứng: một kết quả exact/normalized duy nhất sẽ tự scroll và highlight. Ứng viên lexical hoặc nhiều đoạn trùng nhau cần chọn **Đến đoạn này**.
@@ -51,7 +51,8 @@ Task lưu riêng theo ID trong `chrome.storage.session`, tồn tại qua service
 
 ## Giới hạn
 
-- ChatGPT/Gemini/Claude là **heuristic DOM adapters**, kiểm thử bằng fixture, chưa xác minh với tài khoản live từng dịch vụ. Chỉ lấy link HTTP/HTTPS đã hiện trong câu trả lời. Mở danh sách nguồn rồi quét lại nếu citation chỉ là nút; nhập thủ công nếu link được render ngoài vùng câu trả lời.
+- ChatGPT/Claude nhúng link nguồn dạng `<a href>` nên quét được trực tiếp. **Gemini giấu URL nguồn khỏi DOM** — chỉ hiện tên (ví dụ "PYS Travel") trên chip; URL thật (kèm `#:~:text=` trỏ đúng đoạn) chỉ xuất hiện khi bạn **bấm mở thẻ nguồn**. Vì vậy Gemini chạy **bán tự động**: mở thẻ nguồn muốn tra rồi bấm quét — mỗi lần quét cộng dồn vào danh sách. Nguồn có tên là hostname (ví dụ `www.studocu.vn`) được lấy tự động ở dạng domain gốc.
+- Adapter là **heuristic DOM**, kiểm thử bằng fixture, chưa xác minh đầy đủ với tài khoản live từng dịch vụ. Nhập thủ công nếu link render ngoài vùng câu trả lời.
 - Link ngoài có thể không phải citation; claim được suy từ đoạn gần link. Người dùng cần kiểm tra lại.
 - Chỉ hỗ trợ HTML và DOM đọc được. Chưa hỗ trợ PDF, OCR, iframe khác origin, closed Shadow DOM, paywall hoặc nội dung yêu cầu đăng nhập.
 - Lexical matching chưa hiểu ngữ nghĩa, phủ định hoặc khác ngôn ngữ. Khớp văn bản không chứng nhận nguồn hỗ trợ nhận định. Không hiển thị điểm như phần trăm độ tin cậy.
