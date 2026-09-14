@@ -239,10 +239,17 @@ export function extractCitations(doc: Document, hostname: string): Citation[] {
       selector: "[data-is-streaming], .font-claude-response",
       userSelector: '[data-testid="user-message"], .font-user-message',
     },
+    {
+      host: "grok.com",
+      name: "Grok",
+      // Grok uses message-bubble for both roles; user turns are right-aligned.
+      selector: ".message-bubble:not(.items-end .message-bubble)",
+      userSelector: ".items-end .message-bubble",
+    },
   ].find((c) => c.host === hostname);
   if (!config)
     throw new Error(
-      "Mở ChatGPT, Gemini hoặc Claude rồi bấm icon extension. Hoặc nhập thủ công.",
+      "Mở ChatGPT, Gemini, Claude hoặc Grok rồi bấm icon extension. Hoặc nhập thủ công.",
     );
   const answers = [...doc.querySelectorAll(config.selector)];
   if (!answers.length)

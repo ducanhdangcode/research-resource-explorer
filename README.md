@@ -14,7 +14,7 @@ bun run build
 1. Mở `chrome://extensions`, bật **Developer mode**.
 2. Chọn **Load unpacked**, chọn `.output/chrome-mv3` trong dự án.
 3. Pin Resource Explorer trên toolbar.
-4. Mở ChatGPT, Gemini hoặc Claude; bấm icon extension để mở side panel và cấp `activeTab` cho tab đó.
+4. Mở ChatGPT, Gemini, Claude hoặc Grok (grok.com); bấm icon extension để mở side panel và cấp `activeTab` cho tab đó.
 5. Bấm **Quét citation từ tab hiện tại**. Chọn nguồn, kiểm tra/sửa nhận định, sau đó **Mở nguồn & tìm đoạn**. Với **Gemini**, bấm mở thẻ nguồn trên trang trước khi quét (xem [Giới hạn](#giới-hạn)); có thể quét nhiều lần để cộng dồn.
 6. Chấp nhận quyền domain nguồn. Extension mở tab, tìm và hiển thị kết quả trong panel.
 
@@ -51,7 +51,7 @@ Task lưu riêng theo ID trong `chrome.storage.session`, tồn tại qua service
 
 ## Giới hạn
 
-- ChatGPT/Claude nhúng link nguồn dạng `<a href>` nên quét được trực tiếp. **Gemini giấu URL nguồn khỏi DOM** — chỉ hiện tên (ví dụ "PYS Travel") trên chip; URL thật (kèm `#:~:text=` trỏ đúng đoạn) chỉ xuất hiện khi bạn **bấm mở thẻ nguồn**. Vì vậy Gemini chạy **bán tự động**: mở thẻ nguồn muốn tra rồi bấm quét — mỗi lần quét cộng dồn vào danh sách. Nguồn có tên là hostname (ví dụ `www.studocu.vn`) được lấy tự động ở dạng domain gốc.
+- ChatGPT/Claude/Grok (grok.com) nhúng link nguồn dạng `<a href>` nên quét được trực tiếp. **Gemini giấu URL nguồn khỏi DOM** — chỉ hiện tên (ví dụ "PYS Travel") trên chip; URL thật (kèm `#:~:text=` trỏ đúng đoạn) chỉ xuất hiện khi bạn **bấm mở thẻ nguồn**. Vì vậy Gemini chạy **bán tự động**: mở thẻ nguồn muốn tra rồi bấm quét — mỗi lần quét cộng dồn vào danh sách. Nguồn có tên là hostname (ví dụ `www.studocu.vn`) được lấy tự động ở dạng domain gốc.
 - Adapter là **heuristic DOM**, kiểm thử bằng fixture, chưa xác minh đầy đủ với tài khoản live từng dịch vụ. Nhập thủ công nếu link render ngoài vùng câu trả lời.
 - Link ngoài có thể không phải citation; claim được suy từ đoạn gần link. Người dùng cần kiểm tra lại.
 - Chỉ hỗ trợ HTML và DOM đọc được. Chưa hỗ trợ PDF, OCR, iframe khác origin, closed Shadow DOM, paywall hoặc nội dung yêu cầu đăng nhập.
